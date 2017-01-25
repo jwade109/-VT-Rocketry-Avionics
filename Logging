@@ -140,10 +140,3 @@ double heading = orientation.heading;
   double Accel_z = accel.raw.z;
 delay(1000);
 }
-/*
-*Things to Add
-*Find out better polling rate
-*Add output for sensors to file Answer:  http://electronics.stackexchange.com/questions/54/saving-arduino-sensor-data-to-a-text-file
-*
-*
-*/
