@@ -106,9 +106,7 @@ void loop() {
     int pressure = event.pressure
 
     //Stores tempature in degrees C
-     float temperature;
-     bmp.getTemperature(&temperature);
-     float temperature = temperature;
+     float temperature = bmp.getTemperature(&temperature);
 
      //Stores altitude in meters
      /* Then convert the atmospheric pressure, and SLP to altitude         */
