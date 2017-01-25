@@ -103,12 +103,11 @@ void loop() {
   /* Stores the results (barometric pressure is measure in hPa) */
   if (event.pressure) {
     /* Stores atmospheric pressue in hPa */
-    int pressure = event.pressure
+    int pressure = event.pressure;
 
     //Stores tempature in degrees C
      float temperature;
      bmp.getTemperature(&temperature);
-     temperature = temperature;
 
      //Stores altitude in meters
      /* Then convert the atmospheric pressure, and SLP to altitude         */
