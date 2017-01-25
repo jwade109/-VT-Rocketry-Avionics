@@ -96,7 +96,6 @@ void loop() {
   accel.getEvent(&accel_event);
   mag.getEvent(&mag_event);
 
-  //
   bmp.getEvent(&event);
 
 
