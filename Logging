@@ -122,9 +122,9 @@ void loop() {
 
 
     //Saving the X, Y, and Z in rad/s
-    X=event.gyro.x;
-    Y=event.gyro.y;
-    Z=event.gyro.z;
+   float X=event.gyro.x;
+   float Y=event.gyro.y;
+   float Z=event.gyro.z;
 
     //Saving orientation roll, pitch, and heading
     if (dof.fusionGetOrientation(&accel_event, &mag_event, &orientation)) {
