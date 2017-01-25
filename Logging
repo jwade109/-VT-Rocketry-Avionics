@@ -116,7 +116,7 @@ void loop() {
     float Altitude = bmp.pressureToAltitude(seaLevelPressure,event.pressure);
   }
   else{
-    Serial.print("Sensor error");
+    Serial.print("Sensor problem");
     }
 
 
