@@ -22,7 +22,134 @@ Adafruit_9DOF                 dof   = Adafruit_9DOF();
 Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(30301);
 Adafruit_LSM303_Mag_Unified   mag   = Adafruit_LSM303_Mag_Unified(30302);
 Adafruit_BMP085_Unified bmp = Adafruit_BMP085_Unified(10085);
-Adafruit_L3GD20_Unified       gyro  = Adafruit_L3GD20_Unified(20);
+Adafruit_L3GD20_Unified gyro = Adafruit_L3GD20_Unified(20);
+
+void displaySensorDetails(void) {
+  sensor_t sensor;
+  bmp.getSensor(&sensor);
+  Serial.println("------------------------------------");
+  Serial.print  ("Sensor:       "); Serial.println(sensor.name);
+  Serial.print  ("Driver Ver:   "); Serial.println(sensor.version);
+  Serial.print  ("Unique ID:    "); Serial.println(sensor.sensor_id);
+  Serial.print  ("Max Value:    "); Serial.print(sensor.max_value); Serial.println(" hPa");
+  Serial.print  ("Min Value:    "); Serial.print(sensor.min_value); Serial.println(" hPa");
+  Serial.print  ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" hPa");
+  Serial.println("------------------------------------");
+  Serial.println("");
+  delay(500);
+}
+
+void initSensors() {
+  if(!accel.begin())
+  {
+    /* There was a problem detecting the LSM303 ... check your connections */
+    Serial.println(F("Ooops, no LSM303 detected ... Check your wiring!"));
+    while(1);
+  }
+  if(!mag.begin())
+  {
+    /* There was a problem detecting the LSM303 ... check your connections */
+    Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
+    while(1);
+  }
+}
+
+void setup() {
+  Serial.begin(9600); //I need help for choosing this correctly
+
+  /* Enable auto-ranging */
+  gyro.enableAutoRange(true);
+
+  /* Checking to see if sensors are pluged in */
+  if(!gyro.begin()) {
+  /* There was a problem detecting the L3GD20 ... check your connections */
+  Serial.println("Ooops, no L3GD20 detected ... Check your wiring!");
+  while(1);
+  }
+
+  if(!accel.begin())
+{
+  /* There was a problem detecting the ADXL345 ... check your connections */
+  Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
+  while(1);
+}
+
+if(!bmp.begin())
+{
+  /* There was a problem detecting the BMP085 ... check your connections */
+  Serial.print("Ooops, no BMP085 detected ... Check your wiring or I2C ADDR!");
+  while(1);
+}
+  /* Initialise the sensors */
+  initSensors();
+  displaySensorDetails();
+}
+void loop() {
+
+  //Setting up sensor events
+  sensors_event_t accel_event; //For accelerometer
+  sensors_event_t mag_event; //For magnetometer
+  sensors_vec_t   orientation; //for orientation
+  sensors_event_t event; //For gyroscope
+
+
+  //Read the accelerometer and magnetometer
+  accel.getEvent(&accel_event);
+  mag.getEvent(&mag_event);
+
+  bmp.getEvent(&event);
+
+
+  /* Stores the results (barometric pressure is measure in hPa) */
+  if (event.pressure) {
+    /* Stores atmospheric pressue in hPa */
+    int pressure = event.pressure
+
+    //Stores tempature in degrees C
+     float temperature;
+     bmp.getTemperature(&temperature);
+     temperature = temperature;
+
+     //Stores altitude in meters
+     /* Then convert the atmospheric pressure, and SLP to altitude         */
+    /* Update this next line with the current SLP for better results      */
+    float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
+    float Altitude = bmp.pressureToAltitude(seaLevelPressure,event.pressure);
+  }
+  else{
+    "Sensor error"
+    }
+
+
+
+    //Saving the X, Y, and Z in rad/s
+    double X=event.gyro.x;
+    double Y=event.gyro.y;
+    double Z=event.gyro.z;
+ /*
+This code was created by Aaron Brown.
+It used a few different sensor API provided by the following URL's,
+https://github.com/adafruit/Adafruit_Sensor/archive/master.zip
+https://github.com/adafruit/Adafruit_BMP085_Unified/archive/master.zip
+https://github.com/adafruit/Adafruit_LSM303DLHC/archive/master.zip
+https://github.com/adafruit/Adafruit_L3GD20_U/archive/master.zip
+https://github.com/adafruit/Adafruit_9DOF/archive/master.zip
+
+Not all of this code was written by me, I have just taken from the examples, and modified it.
+
+*/
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BMP085_U.h>
+#include <Adafruit_LSM303_U.h>
+#include <Adafruit_9DOF.h>
+#include <Adafruit_L3GD20_U.h>
+
+//Setting up ID's for sensors
+Adafruit_9DOF                 dof   = Adafruit_9DOF();
+Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(30301);
+Adafruit_LSM303_Mag_Unified   mag   = Adafruit_LSM303_Mag_Unified(30302);
+Adafruit_BMP085_Unified bmp = Adafruit_BMP085_Unified(10085);
 
 void displaySensorDetails(void) {
   sensor_t sensor;
@@ -103,10 +230,12 @@ void loop() {
   /* Stores the results (barometric pressure is measure in hPa) */
   if (event.pressure) {
     /* Stores atmospheric pressue in hPa */
-    int pressure = event.pressure
+    double pressure = event.pressure;
 
     //Stores tempature in degrees C
-     float temperature = bmp.getTemperature(&temperature);
+     float temperature = ;
+     bmp.getTemperature(&temperature);
+     float temperature = temperature;
 
      //Stores altitude in meters
      /* Then convert the atmospheric pressure, and SLP to altitude         */
@@ -115,16 +244,29 @@ void loop() {
     float Altitude = bmp.pressureToAltitude(seaLevelPressure,event.pressure);
   }
   else{
-    Serial.print("Sensor error");
+    "Sensor error"
     }
 
 
 
     //Saving the X, Y, and Z in rad/s
-   float X=event.gyro.x;
-   float Y=event.gyro.y;
-   float Z=event.gyro.z;
+   double X = event.gyro.x;
+   double Y = event.gyro.y;
+   double Z = event.gyro.z;
 
+    //Saving orientation roll, pitch, and heading
+    if (dof.fusionGetOrientation(&accel_event, &mag_event, &orientation)) {
+double roll = orientation.roll;
+double pitch = orientation.pitch;
+double heading = orientation.heading;
+  }
+
+  //Saving accelerometer values x, y, and z.
+  double Accel_x = accel.raw.x;
+  double Accel_y = accel.raw.y;
+  double Accel_z = accel.raw.z;
+delay(1000);
+}
     //Saving orientation roll, pitch, and heading
     if (dof.fusionGetOrientation(&accel_event, &mag_event, &orientation)) {
 double roll = orientation.roll;
