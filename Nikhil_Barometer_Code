@@ -56,8 +56,11 @@ void setup(void)
 /**************************************************************************/
 void loop(void) 
 {
-  
-  /* Get a new sensor event */ 
+  unsigned long currentmillis = millis();
+  if(currentmillis - previousmillis > interval){
+    previousmillis = currentmillis;
+
+    /* Get a new sensor event */ 
   sensors_event_t event;
   bmp.getEvent(&event);
  
@@ -104,8 +107,7 @@ void loop(void)
   {
     Serial.println("Sensor error");
   }
-  unsigned long currentmillis = millis();
-  if(currentmillis - previousmillis > interval){
-    previousmillis = currentmillis;
   }
 }
+  
+  
