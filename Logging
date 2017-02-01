@@ -128,14 +128,14 @@ void loop() {
 
     //Saving orientation roll, pitch, and heading
     if (dof.fusionGetOrientation(&accel_event, &mag_event, &orientation)) {
-double roll = orientation.roll;
-double pitch = orientation.pitch;
-double heading = orientation.heading;
+float roll = orientation.roll;
+float pitch = orientation.pitch;
+float heading = orientation.heading;
   }
 
   //Saving accelerometer values x, y, and z.
-  double Accel_x = accel.raw.x;
-  double Accel_y = accel.raw.y;
-  double Accel_z = accel.raw.z;
+  float Accel_x = accel.raw.x;
+  float Accel_y = accel.raw.y;
+  float Accel_z = accel.raw.z;
 delay(1000);
 }
