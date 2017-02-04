@@ -111,15 +111,18 @@ Serial.println(" Pa.");
 Serial.println("");
 delay(250); //Pause between readings.
  
- 
+mySensorData.print("Temperature: ");
 mySensorData.print(temperature);                             //write temperature data to card
 mySensorData.print(",");                               //write a commma
+mySensorData.print("Pressure: ");
 mySensorData.println(event.pressure);                        //write pressure and end the line (println)
-mySensorData.print(","); 
+mySensorData.print(", "); 
+mySensorData.print("Sea Level Pressure: ");
 mySensorData.print(seaLevelPressure);                             //write temperature data to card
-mySensorData.print(",");  
+mySensorData.print(", ");  
+mySensorData.print("Altitude: ");
 mySensorData.print(Altitude);                             //write temperature data to card
-mySensorData.print(",");  
+mySensorData.print(", ");  
 
 //Saving orientation roll, pitch, and heading
    if (dof.fusionGetOrientation(&accel_event, &mag_event, &orientation))
@@ -128,12 +131,14 @@ mySensorData.print(",");
       float pitch = orientation.pitch;
       float heading = orientation.heading;
 
+      mySensorData.print("Roll: ");
       mySensorData.print(roll);                             //write temperature data to card
-      mySensorData.print(",");  
+      mySensorData.print(", ");
+      mySensorData.print("Pitch: ");
       mySensorData.print(pitch);                             //write temperature data to card
-      mySensorData.print(",");  
-      mySensorData.print(heading);                             //write temperature data to card
-      mySensorData.print(",");  
+      mySensorData.print(", ");
+      mySensorData.print("Heading: ");
+      mySensorData.print(heading);                             //write temperature data to card  
 
     }
     mySensorData.close();                                  //close the file
