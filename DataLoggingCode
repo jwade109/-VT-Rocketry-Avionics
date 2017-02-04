@@ -116,7 +116,7 @@ mySensorData.print(temperature);                             //write temperature
 mySensorData.print(",");                               //write a commma
 mySensorData.print("Pressure: ");
 mySensorData.println(event.pressure);                        //write pressure and end the line (println)
-mySensorData.print(", "); 
+mySensorData.print(" hPa, "); 
 mySensorData.print("Sea Level Pressure: ");
 mySensorData.print(seaLevelPressure);                             //write temperature data to card
 mySensorData.print(", ");  
@@ -126,7 +126,7 @@ mySensorData.print(", ");
 
 //Saving orientation roll, pitch, and heading
    if (dof.fusionGetOrientation(&accel_event, &mag_event, &orientation))
-   {,
+   {
       float roll = orientation.roll;
       float pitch = orientation.pitch;
       float heading = orientation.heading;
