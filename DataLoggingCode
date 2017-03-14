@@ -6,7 +6,6 @@ https://github.com/adafruit/Adafruit_LSM303DLHC/archive/master.zip
 https://github.com/adafruit/Adafruit_L3GD20_U/archive/master.zip
 https://github.com/adafruit/Adafruit_9DOF/archive/master.zip
 
-Not all of this code was written by me, I have just taken from the examples, and modified it.
 */
 
 #include <Wire.h>
