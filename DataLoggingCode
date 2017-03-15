@@ -29,7 +29,9 @@ Adafruit_L3GD20_Unified         gyro  = Adafruit_L3GD20_Unified(20);
 unsigned char interval = 20;
 unsigned char previousmillis= 0;
 File mySensorData;
-
+    double fuckX = 0;
+    double fuckY  = 0;
+    double fuckZ = 0;
 
 void initSensors()
 {
@@ -66,7 +68,7 @@ void initSensors()
 
 
 void setup()
-{  
+{
     Serial.begin(9600);         // we have the best BAUD rates
     gyro.enableAutoRange(true); // Enable auto-ranging
     initSensors();              // Initialise the sensors
@@ -100,42 +102,53 @@ void loop()
     if (currentmillis - previousmillis > interval)
     {
         previousmillis = currentmillis;
-        
+
         //Setting up sensor events
         sensors_event_t accel_event;    //For accelerometer
         sensors_event_t mag_event;      //For magnetometer
         sensors_vec_t   orientation;    //for orientation
         sensors_event_t presstempevent; //For pressure and temperature
-        
+
         //Read the accelerometer and magnetometer
         accel.getEvent(&accel_event);
         mag.getEvent(&mag_event);
         bmp.getEvent(&presstempevent);
-        
-        
+
+
         float temperature;
         bmp.getTemperature(&temperature);
-        
+
         // Stores altitude in meters
         // Then convert the atmospheric pressure, and SLP to altitude
         // Update this next line with the current SLP for better results
         float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
         float Altitude = bmp.pressureToAltitude(seaLevelPressure,presstempevent.pressure);
         float Pressure = presstempevent.pressure;
-  
+
         // transfers data to SD card
-  
+
         TempPressAlt_out(Pressure, Altitude, seaLevelPressure, temperature);
-      
+
         if (dof.fusionGetOrientation(&accel_event, &mag_event, &orientation))
         {
             float roll = orientation.roll;
             float pitch = orientation.pitch;
             float heading = orientation.heading;
-            RollPitch_out(roll, pitch, heading);  
+            RollPitch_out(roll, pitch, heading);
         }
+    fuckX += accel_event.acceleration.x;
+    fuckY += accel_event.acceleration.y;
+    fuckZ += accel_event.acceleration.z;
     }
     mySensorData.close(); //close the file
+
+
+    Serial.print("\r");
+    Serial.print(fuckX);
+    Serial.print("\t");
+    Serial.print(fuckY);
+    Serial.print("\t");
+    Serial.print(fuckZ);
 }
 
 void TempPressAlt_out(float Pressure, float Alt, float Slp, float Temp)
@@ -162,7 +175,7 @@ void TempPressAlt_out(float Pressure, float Alt, float Slp, float Temp)
 }
 
 void RollPitch_out(float roll, float pitch, float heading)
-{        
+{
     mySensorData.print("Roll: ");
     mySensorData.print(roll);           //write temperature data to card
     mySensorData.print(" degrees");
@@ -172,6 +185,6 @@ void RollPitch_out(float roll, float pitch, float heading)
     mySensorData.print(" degrees");
     mySensorData.print(", ");
     mySensorData.print("Heading: ");
-    mySensorData.print(heading);        //write heading data to card  
+    mySensorData.print(heading);        //write heading data to card
     mySensorData.print(" degrees");
 }
