@@ -1,4 +1,5 @@
 /*
+This code was created by Aaron Brown.
 It used a few different sensor API provided by the following URL's,
 https://github.com/adafruit/Adafruit_Sensor/archive/master.zip
 https://github.com/adafruit/Adafruit_BMP085_Unified/archive/master.zip
@@ -6,186 +7,169 @@ https://github.com/adafruit/Adafruit_LSM303DLHC/archive/master.zip
 https://github.com/adafruit/Adafruit_L3GD20_U/archive/master.zip
 https://github.com/adafruit/Adafruit_9DOF/archive/master.zip
 
-*/
+Not all of this code was written by me, I have just taken from the examples, and modified it.
 
+*/
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BMP085_U.h>
 #include <Adafruit_LSM303_U.h>
 #include <Adafruit_9DOF.h>
+#include <Adafruit_GPS.h>
 #include <Adafruit_L3GD20_U.h>
 #include <SD.h> //Load SD card library
-#include <SPI.h> //Load SPI Library
+#include<SPI.h> //Load SPI Library
 
 //Setting up ID's for sensors
-#include "Wire.h" // imports the wire library for talking over I2C
+#include "Wire.h"    // imports the wire library for talking over I2C
+Adafruit_9DOF                 dof   = Adafruit_9DOF();
+Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(30301);
+Adafruit_LSM303_Mag_Unified   mag   = Adafruit_LSM303_Mag_Unified(30302);
+Adafruit_BMP085_Unified bmp = Adafruit_BMP085_Unified(10085);
+Adafruit_L3GD20_Unified       gyro  = Adafruit_L3GD20_Unified(20);
 
-Adafruit_9DOF                   dof   = Adafruit_9DOF();
-Adafruit_LSM303_Accel_Unified   accel = Adafruit_LSM303_Accel_Unified(30301);
-Adafruit_LSM303_Mag_Unified     mag   = Adafruit_LSM303_Mag_Unified(30302);
-Adafruit_BMP085_Unified         bmp = Adafruit_BMP085_Unified(10085);
-Adafruit_L3GD20_Unified         gyro  = Adafruit_L3GD20_Unified(20);
 
-unsigned char interval = 20;
-unsigned char previousmillis= 0;
+long interval = 20;
+long previousmillis= 0;
 File mySensorData;
-    double fuckX = 0;
-    double fuckY  = 0;
-    double fuckZ = 0;
 
-void initSensors()
-{
-    if(!accel.begin())
-    {
-        /* There was a problem detecting the LSM303 ... check your connections */
-        Serial.println(F("Ooops, no LSM303 detected ... Check your wiring!"));
-        while(1);
-    }
-    if(!mag.begin())
-    {
-        /* There was a problem detecting the LSM303 ... check your connections */
-        Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
-        while(1);
-    }
-    if(!gyro.begin())
-    {
-        /* There was a problem detecting the L3GD20 ... check your connections */
-        Serial.println("Ooops, no L3GD20 detected ... Check your wiring!");
-        while(1);
-    }
-    if(!bmp.begin())
-    {
-        /* There was a problem detecting the BMP085 ... check your connections */
-        Serial.print("Ooops, no BMP085 detected ... Check your wiring or I2C ADDR!");
-        while(1);
-    }
-    if(!SD.begin())
-    {
-        Serial.print("No SD card detected");
-        while(1);
-    }
+void initSensors() {
+  if(!accel.begin())
+  {
+    /* There was a problem detecting the LSM303 ... check your connections */
+    Serial.println(F("Ooops, no LSM303 detected ... Check your wiring!"));
+    while(1);
+  }
+  if(!mag.begin())
+  {
+    /* There was a problem detecting the LSM303 ... check your connections */
+    Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
+    while(1);
+  }
+  if(!gyro.begin()) {
+  /* There was a problem detecting the L3GD20 ... check your connections */
+    Serial.println("Ooops, no L3GD20 detected ... Check your wiring!");
+    while(1);
+  }
+  if(!bmp.begin()){
+    /* There was a problem detecting the BMP085 ... check your connections */
+    Serial.print("Ooops, no BMP085 detected ... Check your wiring or I2C ADDR!");
+    while(1);
+    
+  }
+  /*if(!GPS.begin() ){
+     Serial.print("Ooops, no GPS detected ... Check your wiring or shield!");
+     while(1);
+  }*/
 }
 
 
-void setup()
-{
-    Serial.begin(9600);         // we have the best BAUD rates
-    gyro.enableAutoRange(true); // Enable auto-ranging
-    initSensors();              // Initialise the sensors
-    char filename[15];
-    strcpy(filename, "GPSLOG00.TXT");
-    for (uint8_t i = 0; i < 100; i++)
-    {
-        filename[6] = '0' + i/10;
-        filename[7] = '0' + i%10;
-        // create if does not exist, do not open existing, write, sync after write
-        if (! SD.exists(filename))
-        {
-            break;
+void setup(){
+
+  
+  Serial.begin(115200); //I need help for choosing this correctly
+  sensors_event_t event;
+  gyro.enableAutoRange(true); /* Enable auto-ranging */
+  initSensors();  /* Initialise the sensors */
+
+  if (!SD.begin())     // if you're using an UNO, you can use this line instead
+      Serial.println("Card init. failed!"); /*initialize SD card dreader*/
+
+  char filename[15];
+  strcpy(filename, "GPSLOG00.TXT");
+  for (uint8_t i = 0; i < 100; i++) {
+    filename[6] = '0' + i/10;
+    filename[7] = '0' + i%10;
+    // create if does not exist, do not open existing, write, sync after write
+    if (! SD.exists(filename)) {
+      break;
+    }
+  }
+  
+ 
+  mySensorData = SD.open(filename, FILE_WRITE);
+  mySensorData.print("Temperature(C)");
+  mySensorData.print("\t");
+  mySensorData.print("Pressure(hPa)");
+  mySensorData.print("\t");
+  mySensorData.print("Altitude(m)");
+  mySensorData.print("\t");
+  mySensorData.print("Roll(deg)");
+  mySensorData.print("\t");
+  mySensorData.print("Pitch(deg)");
+  mySensorData.print("\t");
+  mySensorData.print("Heading(deg)");
+  mySensorData.println();
+
+  
+  
+}
+void loop(){
+
+
+        unsigned long currentmillis = millis();
+        if(currentmillis - previousmillis > interval){
+              previousmillis = currentmillis;
+              //Setting up sensor events
+              sensors_event_t accel_event; //For accelerometer
+              sensors_event_t mag_event; //For magnetometer
+              sensors_vec_t   orientation; //for orientation
+              sensors_event_t event;  //For pressure and temperature
+              accel.getEvent(&accel_event);
+              mag.getEvent(&mag_event);
+              bmp.getEvent(&event);  
+              //Adafruit_GPS    GPS(&mySerial);
+              
+              float temperature;
+              bmp.getTemperature(&temperature);
+            
+              
+              float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
+              float Altitude = bmp.pressureToAltitude(seaLevelPressure,event.pressure);
+        
+              if(mySensorData){
+                    mySensorData.print(temperature);                             //write temperature data to card
+                    mySensorData.print("\t\t");                                                              //write a commma
+                    mySensorData.print(event.pressure);                        //write pressure and end the line (println)
+                    mySensorData.print("\t\t"); 
+                      
+                    mySensorData.print(Altitude);                             //write temperature data to card
+                    mySensorData.print("\t\t");  
+          
+                    //Saving orientation roll, pitch, and heading
+                   if (dof.fusionGetOrientation(&accel_event, &mag_event, &orientation))
+                   {
+                      float roll = orientation.roll;
+                      float pitch = orientation.pitch;
+                      float heading = orientation.heading;
+                      
+                      mySensorData.print(roll);                             //write temperature data to card
+                      mySensorData.print("\t\t");  
+                      mySensorData.print(pitch);                             //write temperature data to card
+                      mySensorData.print("\t\t");  
+                      mySensorData.print(heading);                             //write temperature data to card  
+               
+                   }
+                  
+              }
+              
+              /***************************************COMMENTED_GPS_SHIT*********************************************************/
+              /*
+              GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
+              GPS.sendCommand(PMTK_SET_NMEA_UPDATE_5HZ);
+              GPS.sendCommand(PGCMD_NOANTENNA);
+              if (GPS.newNMEAreceived()) {
+                char *GPS_sentence = GPS.lastNMEA();
+                if (!GPS.parse(GPS_sentence))   // this also sets the newNMEAreceived() flag to false
+                    return;
+                uint8_t stringsize = strlen(GPS_sentence);
+                if (stringsize != mySensorData.write((uint8_t *)GPS_sentence, stringsize))    //write the string to the SD file
+                    Serial.print("Error baby!!");
+                 strstr(GPS_sentence, "RMC") || strstr(GPS_sentence, "GGA");
+              }
+              */
+             /************************************************************************************************/  
         }
-    }
-
-    mySensorData = SD.open(filename, FILE_WRITE);
-    if (!mySensorData){
-        Serial.print("File couldn't be created");
-    }
-    //GPS.begin(9600);
-    //GPS.sendCommand("$PGCMD,33,0*6D");  //Turn off antenna update
-    //GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
-    //GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
-    delay(100);
-}
-
-void loop()
-{
-    unsigned char currentmillis = millis();
-    if (currentmillis - previousmillis > interval)
-    {
-        previousmillis = currentmillis;
-
-        //Setting up sensor events
-        sensors_event_t accel_event;    //For accelerometer
-        sensors_event_t mag_event;      //For magnetometer
-        sensors_vec_t   orientation;    //for orientation
-        sensors_event_t presstempevent; //For pressure and temperature
-
-        //Read the accelerometer and magnetometer
-        accel.getEvent(&accel_event);
-        mag.getEvent(&mag_event);
-        bmp.getEvent(&presstempevent);
-
-
-        float temperature;
-        bmp.getTemperature(&temperature);
-
-        // Stores altitude in meters
-        // Then convert the atmospheric pressure, and SLP to altitude
-        // Update this next line with the current SLP for better results
-        float seaLevelPressure = SENSORS_PRESSURE_SEALEVELHPA;
-        float Altitude = bmp.pressureToAltitude(seaLevelPressure,presstempevent.pressure);
-        float Pressure = presstempevent.pressure;
-
-        // transfers data to SD card
-
-        TempPressAlt_out(Pressure, Altitude, seaLevelPressure, temperature);
-
-        if (dof.fusionGetOrientation(&accel_event, &mag_event, &orientation))
-        {
-            float roll = orientation.roll;
-            float pitch = orientation.pitch;
-            float heading = orientation.heading;
-            RollPitch_out(roll, pitch, heading);
-        }
-    fuckX += accel_event.acceleration.x;
-    fuckY += accel_event.acceleration.y;
-    fuckZ += accel_event.acceleration.z;
-    }
-    mySensorData.close(); //close the file
-
-
-    Serial.print("\r");
-    Serial.print(fuckX);
-    Serial.print("\t");
-    Serial.print(fuckY);
-    Serial.print("\t");
-    Serial.print(fuckZ);
-}
-
-void TempPressAlt_out(float Pressure, float Alt, float Slp, float Temp)
-{
-    if (Pressure)
-    {
-        mySensorData.print("Temperature: ");
-        mySensorData.print(Temp);                   //write temperature data to card
-        mySensorData.print(" degrees F");
-        mySensorData.print(", ");
-        mySensorData.print("Pressure: ");
-        mySensorData.println(Pressure);             //write pressure and end the line (println)
-        mySensorData.print(" hPa");
-        mySensorData.print(", ");
-        mySensorData.print("Sea Level Pressure: ");
-        mySensorData.print(Slp);                    //write sea level pressure data to card
-        mySensorData.print(" hPa");
-        mySensorData.print(", ");
-        mySensorData.print("Altitude: ");
-        mySensorData.print(Alt);                    //write altitude data to card
-        mySensorData.print(" m");
-        mySensorData.print(", ");
-        //God Damit Use GitHub
-    }
-}
-
-void RollPitch_out(float roll, float pitch, float heading)
-{
-    mySensorData.print("Roll: ");
-    mySensorData.print(roll);           //write temperature data to card
-    mySensorData.print(" degrees");
-    mySensorData.print(", ");
-    mySensorData.print("Pitch: ");
-    mySensorData.print(pitch);          //write pitch data to card
-    mySensorData.print(" degrees");
-    mySensorData.print(", ");
-    mySensorData.print("Heading: ");
-    mySensorData.print(heading);        //write heading data to card
-    mySensorData.print(" degrees");
+        mySensorData.println();
+        mySensorData.flush();
 }
