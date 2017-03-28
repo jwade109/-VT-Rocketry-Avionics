@@ -7,28 +7,9 @@
  */
 
 #include "MatrixMath.h"
+#include <math.h>
 
-#define NR_END 1
-
-MatrixMath Matrix;			// Pre-instantiate
-
-// Matrix Printing Routine
-// Uses tabs to separate numbers under assumption printed float width won't cause problems
-void MatrixMath::Print(float* A, int m, int n, String label){
-	// A = input matrix (m x n)
-	int i,j;
-	Serial.println();
-	Serial.println(label);
-	for (i=0; i<m; i++){
-		for (j=0;j<n;j++){
-			Serial.print(A[n*i+j]);
-			Serial.print("\t");
-		}
-		Serial.println();
-	}
-}
-
-void MatrixMath::Copy(float* A, int n, int m, float* B)
+void Matrix::copy(float* A, int n, int m, float* B)
 {
 	int i, j, k;
 	for (i=0;i<m;i++)
@@ -40,7 +21,7 @@ void MatrixMath::Copy(float* A, int n, int m, float* B)
 
 //Matrix Multiplication Routine
 // C = A*B
-void MatrixMath::Multiply(float* A, float* B, int m, int p, int n, float* C)
+void Matrix::multiply(float* A, float* B, int m, int p, int n, float* C)
 {
 	// A = input matrix (m x p)
 	// B = input matrix (p x n)
@@ -60,7 +41,7 @@ void MatrixMath::Multiply(float* A, float* B, int m, int p, int n, float* C)
 
 
 //Matrix Addition Routine
-void MatrixMath::Add(float* A, float* B, int m, int n, float* C)
+void Matrix::add(float* A, float* B, int m, int n, float* C)
 {
 	// A = input matrix (m x n)
 	// B = input matrix (m x n)
@@ -75,7 +56,7 @@ void MatrixMath::Add(float* A, float* B, int m, int n, float* C)
 
 
 //Matrix Subtraction Routine
-void MatrixMath::Subtract(float* A, float* B, int m, int n, float* C)
+void Matrix::subtract(float* A, float* B, int m, int n, float* C)
 {
 	// A = input matrix (m x n)
 	// B = input matrix (m x n)
@@ -90,7 +71,7 @@ void MatrixMath::Subtract(float* A, float* B, int m, int n, float* C)
 
 
 //Matrix Transpose Routine
-void MatrixMath::Transpose(float* A, int m, int n, float* C)
+void Matrix::transpose(float* A, int m, int n, float* C)
 {
 	// A = input matrix (m x n)
 	// m = number of rows in A
@@ -102,7 +83,7 @@ void MatrixMath::Transpose(float* A, int m, int n, float* C)
 			C[m*j+i]=A[n*i+j];
 }
 
-void MatrixMath::Scale(float* A, int m, int n, float k)
+void Matrix::scale(float* A, int m, int n, float k)
 {
 	for (int i=0; i<m; i++)
 		for (int j=0; j<n; j++)
@@ -117,7 +98,7 @@ void MatrixMath::Scale(float* A, int m, int n, float k)
 //	 NUMERICAL RECIPES: The Art of Scientific Computing.
 // * The function returns 1 on success, 0 on failure.
 // * NOTE: The argument is ALSO the result matrix, meaning the input matrix is REPLACED
-int MatrixMath::Invert(float* A, int n)
+int Matrix::invert(float* A, int n)
 {
 	// A = input matrix AND result matrix
 	// n = number of rows = number of columns in A (n x n)
@@ -132,9 +113,9 @@ int MatrixMath::Invert(float* A, int n)
 		tmp = 0;
 		for (i = k; i < n; i++)
 		{
-			if (abs(A[i*n+k]) >= tmp)	// 'Avoid using other functions inside abs()?'
+			if (fabs(A[i*n+k]) >= tmp)	// 'Avoid using other functions inside abs()?'
 			{
-				tmp = abs(A[i*n+k]);
+				tmp = fabs(A[i*n+k]);
 				pivrow = i;
 			}
 		}
@@ -142,7 +123,6 @@ int MatrixMath::Invert(float* A, int n)
 		// check for singular matrix
 		if (A[pivrow*n+k] == 0.0f)
 		{
-			Serial.println("Inversion failed due to singular matrix");
 			return 0;
 		}
 
