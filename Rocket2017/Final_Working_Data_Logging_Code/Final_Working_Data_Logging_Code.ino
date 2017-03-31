@@ -72,22 +72,12 @@ void setup(){
   gyro.enableAutoRange(true); /* Enable auto-ranging */
   initSensors();  /* Initialise the sensors */
 
-  if (!SD.begin())     // if you're using an UNO, you can use this line instead
+  if (!SD.begin(10))     // if you're using an UNO, you can use this line instead
       Serial.println("Card init. failed!"); /*initialize SD card dreader*/
 
-  char filename[15];
-  strcpy(filename, "GPSLOG00.TXT");
-  for (uint8_t i = 0; i < 100; i++) {
-    filename[6] = '0' + i/10;
-    filename[7] = '0' + i%10;
-    // create if does not exist, do not open existing, write, sync after write
-    if (! SD.exists(filename)) {
-      break;
-    }
-  }
-  
  
-  mySensorData = SD.open(filename, FILE_WRITE);
+ 
+  mySensorData = SD.open("FuckingShit.txt", FILE_WRITE);
   mySensorData.print("Temperature(C)");
   mySensorData.print("\t");
   mySensorData.print("Pressure(hPa)");
@@ -100,6 +90,8 @@ void setup(){
   mySensorData.print("\t");
   mySensorData.print("Heading(deg)");
   mySensorData.println();
+
+  mySensorData.close();
 
   
   
@@ -128,6 +120,7 @@ void loop(){
               float Altitude = bmp.pressureToAltitude(seaLevelPressure,event.pressure);
         
               if(mySensorData){
+                    mySensorData = SD.open("FuckingShit.txt", FILE_WRITE);
                     mySensorData.print(temperature);                             //write temperature data to card
                     mySensorData.print("\t\t");                                                              //write a commma
                     mySensorData.print(event.pressure);                        //write pressure and end the line (println)
@@ -135,7 +128,8 @@ void loop(){
                       
                     mySensorData.print(Altitude);                             //write temperature data to card
                     mySensorData.print("\t\t");  
-          
+
+                    Serial.print(Altitude);
                     //Saving orientation roll, pitch, and heading
                    if (dof.fusionGetOrientation(&accel_event, &mag_event, &orientation))
                    {
@@ -171,5 +165,5 @@ void loop(){
                /*************************************************************************************************************/
         }
         mySensorData.println();
-        mySensorData.flush();
+       mySensorData.close();
 }
