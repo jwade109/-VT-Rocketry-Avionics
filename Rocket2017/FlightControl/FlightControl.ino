@@ -6,7 +6,7 @@
 #include <Adafruit_LSM303_U.h>
 #include <Adafruit_9DOF.h>
 
-#include <RocketMath.h>
+#include <RocketMath.h>             // for Kalman filter and trajectory equations
 
 const int CS_pin = 4;
 double previous_time;
@@ -77,10 +77,6 @@ void loop()
     {
         altitude = bmp.pressureToAltitude(SENSORS_PRESSURE_SEALEVELHPA, event.pressure);
     }
-    else
-    {
-        Serial.print("Failed to get event");
-    }
     
     if(accelerometer.getEvent(&accel_event))
     {
@@ -94,6 +90,19 @@ void loop()
                         String(accelX) + "     " +
                         String(accelY) + "     " +
                         String(accelZ);
+    
+    /* 
+     * Example syntax for trajectory equations
+     */
+    double vel = Equation::vel(0, 0, 0, 0);
+    double alt = Equation::alt(0, 0, 0, 0, 0);
+    
+    /* 
+     * Example syntax for Kalman filter
+     */
+    KalmanFilter filter(0.5, 0.01);
+    float Z[MEAS] = {alt, vel};
+    float* X = filter.step((float*) Z);
     
     File mySensorData = SD.open("RocketData.csv", FILE_WRITE);
     
