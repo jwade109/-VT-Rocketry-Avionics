@@ -1,4 +1,4 @@
-#include "equations.h"
+#include "Equations.h"
 #include <stdio.h>
 #include <math.h>
 #include <time.h>

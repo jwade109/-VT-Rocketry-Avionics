@@ -10,19 +10,19 @@ using namespace std;
 class KalmanFilter {
     
     public:
-        float X[N][1]; // Nx1
-        float P[N][N]; // NxN
-        float F[N][N]; // NxN
-        float H[N][M]; // NxM
-        float R[M][M]; // MxM
-        float Q[N][N]; // NxN
+        float X[STATES][1]; // Nx1
+        float P[STATES][STATES]; // NxN
+        float F[STATES][STATES]; // NxN
+        float H[STATES][MEAS]; // NxM
+        float R[MEAS][MEAS]; // MxM
+        float Q[STATES][STATES]; // NxN
         
         KalmanFilter(float sensorCov, float processCov);
         
         float* step(float* Z);
 
     private:
-        float Identity[N][N];
+        float Identity[STATES][STATES];
 };
 
 #endif

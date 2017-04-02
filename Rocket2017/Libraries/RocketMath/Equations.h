@@ -1,4 +1,4 @@
-// equations.h
+// Equations.h
 
 double accel(double v_burn, double m, double k, double t);
 
