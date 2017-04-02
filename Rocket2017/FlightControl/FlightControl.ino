@@ -7,6 +7,7 @@
 #include <Adafruit_9DOF.h>
 
 #include <RocketMath.h>             // for Kalman filter and trajectory equations
+#include "Vehicle.h"                // for rocket vehicle characteristics
 
 const int CS_pin = 4;
 double previous_time;
@@ -94,8 +95,8 @@ void loop()
     /* 
      * Example syntax for trajectory equations
      */
-    double vel = Equation::vel(0, 0, 0, 0);
-    double alt = Equation::alt(0, 0, 0, 0, 0);
+    double ta = Equation::t_a(vel, DRY_MASS, K_ACTIVE);
+    double alt = Equation::alt(alt, vel, DRY_MASS, K_ACTIVE, ta);
     
     /* 
      * Example syntax for Kalman filter
