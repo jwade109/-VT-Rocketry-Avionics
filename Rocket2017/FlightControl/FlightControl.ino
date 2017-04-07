@@ -15,8 +15,8 @@ KalmanFilter filter(0.5, 0.01);
 
 double previous_time, current_time;
 
-void setup(){
-
+void setup()
+{
     Serial.begin(9600);
 
     if(!lsm.begin())
@@ -60,14 +60,21 @@ void setup(){
     Serial.println("\n");
 }
 
+void update_time(double* current_time, double* dt)
+{
+    static double lastTime;
+    *current_time = (double) millis()/1000;
+    *dt = *current_time - lastTime;
+    lastTime = *current_time;
+}
+
 void loop()
-{    
-    double dt = current_time - previous_time;
-    previous_time = current_time;
-    current_time = (double) millis()/1000;
+{
+    double current_time, dt;
+    update_time(&current_time, &dt);
     
-    sensors_event_t alt_event;            // Object for pressure and altitude - FOR BMP085
-    sensors_event_t accel_event;      // Object for accelerometer - for accelation - 9DOF
+    sensors_event_t alt_event;        // altitude event from BMP085
+    sensors_event_t accel_event;      // acceleration event from LSM303
     
     float altitude;
     float accelX;
@@ -85,7 +92,7 @@ void loop()
         accelY = accel_event.acceleration.y;
         accelZ = accel_event.acceleration.z;
     }
-    
+
     String dataString = String(current_time, 3) + "     " +
                         String(1/dt)            + "     " +
                         String(altitude)        + "     " +
@@ -110,6 +117,7 @@ void loop()
     File sensorData = SD.open("RocketData.csv", FILE_WRITE);
     
     Serial.println(dataString);
+    
     if(sensorData)
     {
         sensorData.print(dataString);
