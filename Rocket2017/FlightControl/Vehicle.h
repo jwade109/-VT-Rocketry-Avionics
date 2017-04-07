@@ -17,3 +17,5 @@
 #define K_PASSIVE       (0.5 * ATM_DENSITY * CD_PASSIVE * REF_AREA_BODY)
 
 #define K_ACTIVE        (0.5 * ATM_DENSITY * CD_ACTIVE * (REF_AREA_BODY + 4*REF_AREA_FLAP))
+
+#define NOMINAL_DT      0.001    // seconds

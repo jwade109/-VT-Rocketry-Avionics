@@ -4,69 +4,69 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BMP085_U.h>
 #include <Adafruit_LSM303_U.h>
-#include <Adafruit_9DOF.h>
 
 #include <RocketMath.h>             // for Kalman filter and trajectory equations
 #include "Vehicle.h"                // for rocket vehicle characteristics
 
-const int CS_pin = 4;
-double previous_time;
-double current_time;
-
-Adafruit_9DOF                       dof = Adafruit_9DOF();
-Adafruit_LSM303_Accel_Unified       accelerometer = Adafruit_LSM303_Accel_Unified(30301);
+Adafruit_LSM303_Accel_Unified       lsm = Adafruit_LSM303_Accel_Unified(30301);
 Adafruit_BMP085_Unified             bmp = Adafruit_BMP085_Unified(10085);
+
+KalmanFilter filter(0.5, 0.01);
+
+double previous_time, current_time;
 
 void setup(){
 
     Serial.begin(9600);
-    
-    if(!accelerometer.begin())
+
+    if(!lsm.begin())
     {
-        Serial.println(F("Ooops, no LSM303 detected ... Check your wiring!"));
+        Serial.println("No LSM303 detected: check wiring");
         while(1);
     }
   
     if(!bmp.begin())
     {
-        Serial.print("Ooops, no BMP085 detected ... Check your wiring or I2C ADDR!");
+        Serial.print("No BMP085 detected: check wiring or I2C ADDR");
         while(1);
     }
 
-    pinMode(CS_pin, OUTPUT);
-
-    if (!SD.begin(CS_pin))
+    if (!SD.begin())
     {
-        Serial.println("Card init. failed!"); /*initialize SD card dreader*/
+        Serial.println("SD card initialization failed");
     }
     
-    File mySensorData = SD.open("RocketData.csv", FILE_WRITE);
+    File sensorData = SD.open("RocketData.csv", FILE_WRITE);
   
-    if(mySensorData)
+    if(sensorData)
     {
-        mySensorData.print("Time(ms)");
-        mySensorData.print("\t");
-        mySensorData.print("Altitude(m)");
-        mySensorData.print("\t");
-        mySensorData.print("AccelX(m/s^2)");
-        mySensorData.print("\t");
-        mySensorData.print("AccelY(m/s^2)");
-        mySensorData.print("\t");
-        mySensorData.print("AccelZ(m/s^2)");
-        mySensorData.print("\t");
-        mySensorData.close();
+        sensorData.print("Time(ms)");
+        sensorData.print("\t");
+        sensorData.print("Altitude(m)");
+        sensorData.print("\t");
+        sensorData.print("AccelX(m/s^2)");
+        sensorData.print("\t");
+        sensorData.print("AccelY(m/s^2)");
+        sensorData.print("\t");
+        sensorData.print("AccelZ(m/s^2)");
+        sensorData.print("\t");
+        sensorData.close();
     }
 
-    current_time = millis()/1000;
+    previous_time = (double) millis()/1000;
+    delay(NOMINAL_DT * 1000);
+    current_time = (double) millis()/1000;
+    delay(NOMINAL_DT * 1000);
+    Serial.println("\n");
 }
 
 void loop()
-{
-    previous_time = current_time;
+{    
     double dt = current_time - previous_time;
-    current_time = millis()/1000;
+    previous_time = current_time;
+    current_time = (double) millis()/1000;
     
-    sensors_event_t event;            // Object for pressure and altitude - FOR BMP085
+    sensors_event_t alt_event;            // Object for pressure and altitude - FOR BMP085
     sensors_event_t accel_event;      // Object for accelerometer - for accelation - 9DOF
     
     float altitude;
@@ -74,23 +74,26 @@ void loop()
     float accelY;
     float accelZ;
     
-    if(bmp.getEvent(&event))
+    if(bmp.getEvent(&alt_event))
     {
-        altitude = bmp.pressureToAltitude(SENSORS_PRESSURE_SEALEVELHPA, event.pressure);
+        altitude = bmp.pressureToAltitude(SENSORS_PRESSURE_SEALEVELHPA, alt_event.pressure);
     }
     
-    if(accelerometer.getEvent(&accel_event))
+    if(lsm.getEvent(&accel_event))
     {
         accelX = accel_event.acceleration.x;
         accelY = accel_event.acceleration.y;
         accelZ = accel_event.acceleration.z;
     }
     
-    String dataString = String(current_time * 1000) + "    " +
-                        String(altitude) + "     " +
-                        String(accelX) + "     " +
-                        String(accelY) + "     " +
+    String dataString = String(current_time, 3) + "     " +
+                        String(1/dt)            + "     " +
+                        String(altitude)        + "     " +
+                        String(accelX)          + "     " +
+                        String(accelY)          + "     " +
                         String(accelZ);
+
+    int vel = 0;
     
     /* 
      * Example syntax for trajectory equations
@@ -101,17 +104,22 @@ void loop()
     /* 
      * Example syntax for Kalman filter
      */
-    KalmanFilter filter(0.5, 0.01);
     float Z[MEAS] = {alt, vel};
     float* X = filter.step((float*) Z);
     
-    File mySensorData = SD.open("RocketData.csv", FILE_WRITE);
+    File sensorData = SD.open("RocketData.csv", FILE_WRITE);
     
-    if(mySensorData)
+    Serial.println(dataString);
+    if(sensorData)
     {
-        mySensorData.print(dataString);
-        mySensorData.close();
+        sensorData.print(dataString);
+        sensorData.close();
     }
-    
-    delay(20);
+
+    double compTime = (double) millis()/1000 - current_time;
+
+    if (compTime < NOMINAL_DT)
+    {
+        delay((NOMINAL_DT - compTime)*1000);
+    }
 }
