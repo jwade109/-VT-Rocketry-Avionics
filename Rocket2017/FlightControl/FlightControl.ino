@@ -119,12 +119,15 @@ void loop()
     lsm.getEvent(&accel_event);
     accel = accel_event.acceleration.x; // acceleration along longitudinal axis
     
-    int vel = 100;
-    double ta = Equation::t_a(vel, DRY_MASS, K_ACTIVE);
-    double alt = Equation::alt(alt, vel, DRY_MASS, K_ACTIVE, ta);
-    
-    float Z[MEAS] = {alt, accel};
-    float* X = filter.step((float*) Z);
+    if (FLIGHT_NUMBER) // this block only runs during the second flight
+    {
+        int vel = 100;
+        double ta = Equation::t_a(vel, DRY_MASS, K_ACTIVE);
+        double alt = Equation::alt(alt, vel, DRY_MASS, K_ACTIVE, ta);
+
+        float Z[MEAS] = {alt, accel};
+        float* X = filter.step((float*) Z);
+    }
 
     sensorData.print(current_time, 4);
     sensorData.print(",");
