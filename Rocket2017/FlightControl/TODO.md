@@ -1,7 +1,7 @@
 # Things to add to FlightControl.ino
 With most important things at the top
 
-## Ability to control flaps via stepper motor
+## Ability to control flaps via DC motor
 Maybe make a wrapper class? Like motor.set(ON), motor.set(OFF). Hopefully as simple as possible.
 
 ## Detection/progression through the stages of flight
