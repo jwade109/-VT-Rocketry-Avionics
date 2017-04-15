@@ -24,6 +24,8 @@ Adafruit_BMP085_Unified             bmp = Adafruit_BMP085_Unified(10085);
 KalmanFilter filter(0,0.0001);
 File sensorData;
 
+using namespace Equation;
+
 void setup()
 {
     // set the pinmode for the diagnostic LEDs
@@ -109,7 +111,49 @@ void loop()
     }
     if (stage == APOGEE_COAST && FLIGHT_NUMBER)
     {
-        // motor control routine
+        /*
+         * alt_next and vel_next are the predicted state of the rocket in
+         * dt seconds, assuming the flaps are deployed, and are found by
+         * solving the following differential equation:
+         *
+         *     dv/dt + (kv^2 / m) + g = 0
+         *
+         * This yields the model found in Equations.h.
+         * ta_predict is the time to apogee which is predicted for the
+         * next step, and apo_predict is the apogee altitude,
+         * assuming the flaps are retracted for the rest of the flight.
+         * As long as this predicted altitude is greater than the target,
+         * it is desirable to lower it for this timestep, so the flaps
+         * are opened. Otherwise, opening the flaps this step will cause the
+         * vehicle to brake too hard, so the flaps are closed.
+         */
+
+        const int vmin = 8; // minimum velocity for flap control
+
+        // predictive calculations determine where vehicle will be next step
+        double alt_next = alt(altitude, velocity, DRY_MASS, K_ACTIVE, dt);
+        double vel_next = vel(velocity, DRY_MASS, K_ACTIVE, dt);
+
+        // describe the trajectory the vehicle will be on during next step
+        double ta_predict = t_a(vel_next, DRY_MASS, K_PASSIVE);
+        double apo_predict = alt(alt_next, vel_next, DRY_MASS, K_PASSIVE, ta_predict);
+
+        // if the predicted altitude is acceptable, engage the flaps
+        if (apo_predict > TARGET_ALT && vel_next > vmin)
+        {
+            // TODO: flaps ON
+        }
+        else // otherwise, retract the flaps
+        {
+            // TODO: flaps OFF
+        }
+
+        // permanently disable flaps if velocity is low enough
+        if (velocity < vmin)
+        {
+            // TODO: flaps OFF
+            stage++;
+        }
     }
 
     alt_prev = altitude; // save previous altitude for faux derivative
@@ -166,6 +210,15 @@ void update_indicator()
 
 void fatal_error(int error)
 {
-    digitalWrite(ERROR_PIN, HIGH);
-    while(1);
+    while(1)
+    {
+        for (int i = 0; i < error; i++)
+        {
+            digitalWrite(ERROR_PIN, HIGH);
+            delay(150);
+            digitalWrite(ERROR_PIN, LOW);
+            delay(150);
+        }
+        delay(500);
+    }
 }

@@ -12,7 +12,7 @@ Maybe make a wrapper class? Like motor.set(ON), motor.set(OFF). Hopefully as sim
 Almost all of our calculations will occur during stage 3, with most other operations occurring during stage 2.
 
 ## Kalman filter partial implementation
-This entails passing the filter one variable at a time and recieving a less noisy, more accurate version of that variable.
+This entails passing the filter one variable at a time and receiving a less noisy, more accurate version of that variable.
 
 ## Kalman filter full implementation
 This means passing the filter several variables and getting a more comprehensive model of the state of the vehicle.
