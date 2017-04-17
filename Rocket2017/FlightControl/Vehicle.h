@@ -1,9 +1,5 @@
 #define FLIGHT_NUMBER   0       // either 0 or 1
 
-#define ACCEL_BIAS      10.25   // m/s^2
-
-#define ALT_BIAS        514.5   // meters
-
 #define WET_MASS        5.0     // kilograms
 
 #define DRY_MASS        3.75    // kilograms

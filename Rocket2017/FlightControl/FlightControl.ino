@@ -16,6 +16,9 @@
 #define MOTOR_BURN                  1 // indicates motor is burning. accel > 0.
 #define APOGEE_COAST                2 // indicates motor has burned out. accel < 0.
 
+double LAUNCHPAD_ALT;               // altitude of launchsite
+double REST_ACCEL;                  // acceleration of non-accelerating vehicle
+long int BEGIN_TIME;                // time the main loop begins
 int stage = ON_LAUNCHPAD;           // current state of the vehicle
 
 Adafruit_LSM303_Accel_Unified       lsm = Adafruit_LSM303_Accel_Unified(30301);
@@ -40,10 +43,9 @@ void setup()
     digitalWrite(ERROR_PIN, LOW);
 
     // initialize the LSM303, the BMP085, and the SD card
-    if(!lsm.begin() || !bmp.begin() || !SD.begin())
-    {
-        fatal_error(1);
-    }
+    if(!lsm.begin()) fatal_error(1);
+    if(!bmp.begin()) fatal_error(2);
+    if(!SD.begin()) fatal_error(3);
 
     // initialize the log file
     char filename[] = "LOG000.csv";
@@ -59,10 +61,10 @@ void setup()
             break;
         }
     }
-    if (!sensorData)
-    {
-        fatal_error(2);
-    }
+    if (!sensorData) fatal_error(4);
+
+    LAUNCHPAD_ALT = getAltitude(100);
+    REST_ACCEL = getAcceleration(100);
 
     // initialize the Kalman filter
     // state transition matrix, F
@@ -70,7 +72,7 @@ void setup()
     filter.F[1][1] = 1;
     // sensor covariance matrix, R
     filter.R[0][0] = 0.08;
-    filter.R[1][1] = 0.02;
+    filter.R[1][1] = 0.001;
     // state matrix, X
     filter.X[0][0] = 0;
     filter.X[1][0] = 0;
@@ -79,7 +81,13 @@ void setup()
     filter.P[1][1] = 100;
 
     sensorData.println(filename);
-    sensorData.println("time,alt,accel,vel");
+    sensorData.println("Notes:");
+    sensorData.print("Launchsite altitude: ");
+    sensorData.println(LAUNCHPAD_ALT);
+    sensorData.print("Resting acceleration: ");
+    sensorData.println(REST_ACCEL);
+    sensorData.println("time,raw alt,k alt,raw accel,k accel,vel");
+    BEGIN_TIME = millis();
     delay(NOMINAL_DT * 1000);
 }
 
@@ -87,12 +95,14 @@ void loop()
 {
     update_indicator();
     static double alt_prev;
-    double current_time, dt, altitude, accel;
-    update_values(&current_time, &dt, &altitude, &accel);
+    double current_time, dt, raw_altitude, altitude, raw_accel, accel;
+    update_time(&current_time, &dt);
+    raw_altitude = getAltitude(1) - LAUNCHPAD_ALT;
+    raw_accel = getAcceleration(1) - REST_ACCEL;
 
     // filter wizardry to clean up alt and accel data
     filter.F[0][1] = 0.2 * dt;
-    float Z[2] = {altitude, accel};
+    float Z[2] = {raw_altitude, raw_accel};
     float* X = filter.step((float*) Z);
     altitude = X[0];
     accel = X[1];
@@ -161,7 +171,11 @@ void loop()
     // write to log file
     sensorData.print(current_time, 4);
     sensorData.print(",");
+    sensorData.print(raw_altitude);
+    sensorData.print(",");
     sensorData.print(altitude);
+    sensorData.print(",");
+    sensorData.print(raw_accel);
     sensorData.print(",");
     sensorData.print(accel);
     sensorData.print(",");
@@ -176,22 +190,13 @@ void loop()
     }
 }
 
-void update_values(double* current_time, double* dt, double* alt, double* accel)
+void update_time(double* current_time, double* dt)
 {
     // get current time and time since last call
     static double lastTime;
-    *current_time = (double) millis()/1000;
+    *current_time = (double) (millis() - BEGIN_TIME)/1000;
     *dt = *current_time - lastTime;
     lastTime = *current_time;
-
-    // collect acceleration and altitude measurements
-    sensors_event_t alt_event;        // altitude event from BMP085
-    sensors_event_t accel_event;      // acceleration event from LSM303
-    bmp.getEvent(&alt_event);
-    *alt = bmp.pressureToAltitude(SENSORS_PRESSURE_SEALEVELHPA,
-        alt_event.pressure) - ALT_BIAS;
-    lsm.getEvent(&accel_event);
-    *accel = accel_event.acceleration.z - ACCEL_BIAS;
 }
 
 void update_indicator()
@@ -215,10 +220,35 @@ void fatal_error(int error)
         for (int i = 0; i < error; i++)
         {
             digitalWrite(ERROR_PIN, HIGH);
-            delay(150);
+            delay(250);
             digitalWrite(ERROR_PIN, LOW);
-            delay(150);
+            delay(250);
         }
         delay(500);
     }
+}
+
+double getAcceleration(int measurements)
+{
+    sensors_event_t event;
+    double sum = 0;
+    for (int i = 0; i < measurements; i++)
+    {
+        lsm.getEvent(&event);
+        sum += event.acceleration.z;
+    }
+    return sum/measurements;
+}
+
+double getAltitude(int measurements)
+{
+    sensors_event_t event;
+    double sum = 0;
+    for (int i = 0; i < measurements; i++)
+    {
+        bmp.getEvent(&event);
+        sum += bmp.pressureToAltitude(SENSORS_PRESSURE_SEALEVELHPA,
+            event.pressure);
+    }
+    return sum/measurements;
 }
