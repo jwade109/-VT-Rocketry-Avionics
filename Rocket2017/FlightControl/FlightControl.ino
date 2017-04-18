@@ -1,12 +1,12 @@
 #include <SD.h>                     // SD card library
-#include <SPI.h>
-
-#include <Adafruit_Sensor.h>
 #include <Adafruit_BMP085_U.h>      // for BMP085 altimeter
 #include <Adafruit_LSM303_U.h>      // for LSM303 accelerometer
 
 #include <RocketMath.h>             // for Kalman filter and trajectory equations
 #include "Vehicle.h"                // for rocket vehicle characteristics
+
+#define CLR(x,y) (x&=(~(1<<y)))     // macros for writing to registers
+#define SET(x,y) (x|=(1<<y))
 
 #define NOMINAL_DT                  0.05 // seconds
 #define INDICATOR_PIN               3 // blinks with every tick
@@ -31,16 +31,20 @@ using namespace Equation;
 
 void setup()
 {
+    Serial.begin(115200);
+
     // set the pinmode for the diagnostic LEDs
-    pinMode(INDICATOR_PIN, OUTPUT);
-    pinMode(ERROR_PIN, OUTPUT);
+    // regWrite(&DDRD, INDICATOR_PIN, 1);
+    // regWrite(&DDRD, ERROR_PIN, 1);
+    SET(DDRD, INDICATOR_PIN);
+    SET(DDRD, ERROR_PIN);
 
     // flash the LEDs to ensure they're all working
-    digitalWrite(INDICATOR_PIN, HIGH);
-    digitalWrite(ERROR_PIN, HIGH);
+    SET(PORTD, INDICATOR_PIN);
+    SET(PORTD, ERROR_PIN);
     delay(1000);
-    digitalWrite(INDICATOR_PIN, LOW);
-    digitalWrite(ERROR_PIN, LOW);
+    CLR(PORTD, INDICATOR_PIN);
+    CLR(PORTD, ERROR_PIN);
 
     // initialize the LSM303, the BMP085, and the SD card
     if(!lsm.begin()) fatal_error(1);
@@ -54,7 +58,6 @@ void setup()
         filename[3] = i/100 + '0';
         filename[4] = (i/10)%10 + '0';
         filename[5] = i%10 + '0';
-
         if (!SD.exists(filename))
         {
             sensorData = SD.open(filename, FILE_WRITE);
@@ -82,6 +85,8 @@ void setup()
 
     sensorData.println(filename);
     sensorData.println("Notes:");
+    sensorData.print("Nominal dt: ");
+    sensorData.println(NOMINAL_DT);
     sensorData.print("Launchsite altitude: ");
     sensorData.println(LAUNCHPAD_ALT);
     sensorData.print("Resting acceleration: ");
@@ -138,7 +143,7 @@ void loop()
          * vehicle to brake too hard, so the flaps are closed.
          */
 
-        const int vmin = 8; // minimum velocity for flap control
+        const uint8_t vmin = 8; // minimum velocity for flap control
 
         // predictive calculations determine where vehicle will be next step
         double alt_next = alt(altitude, velocity, DRY_MASS, K_ACTIVE, dt);
@@ -169,6 +174,7 @@ void loop()
     alt_prev = altitude; // save previous altitude for faux derivative
 
     // write to log file
+    static uint8_t flush;
     sensorData.print(current_time, 4);
     sensorData.print(",");
     sensorData.print(raw_altitude);
@@ -180,13 +186,18 @@ void loop()
     sensorData.print(accel);
     sensorData.print(",");
     sensorData.println(velocity);
-    sensorData.flush();
+    flush++;
+    if (flush == 50)
+    {
+        sensorData.flush();
+        flush = 0;
+    }
 
     // wait for next tick if computations were fast enough
-    double compTime = (double) millis()/1000 - current_time;
+    double compTime = (double) (millis() - BEGIN_TIME)/1000 - current_time;
     if (compTime < NOMINAL_DT)
     {
-        delay((NOMINAL_DT - compTime)*1000);
+        delay((NOMINAL_DT - compTime)*995);
     }
 }
 
@@ -204,35 +215,35 @@ void update_indicator()
     static bool indicator;
     if (indicator)
     {
-        analogWrite(INDICATOR_PIN, 50);
+        SET(PORTD, INDICATOR_PIN);
     }
     else
     {
-        analogWrite(INDICATOR_PIN, 0);
+        CLR(PORTD, INDICATOR_PIN);
     }
     indicator = !indicator;
 }
 
-void fatal_error(int error)
+void fatal_error(uint8_t error)
 {
     while(1)
     {
-        for (int i = 0; i < error; i++)
+        for (uint8_t i = 0; i < error; i++)
         {
-            digitalWrite(ERROR_PIN, HIGH);
+            SET(PORTD, ERROR_PIN);
             delay(250);
-            digitalWrite(ERROR_PIN, LOW);
+            CLR(PORTD, ERROR_PIN);
             delay(250);
         }
         delay(500);
     }
 }
 
-double getAcceleration(int measurements)
+double getAcceleration(uint8_t measurements)
 {
     sensors_event_t event;
     double sum = 0;
-    for (int i = 0; i < measurements; i++)
+    for (uint8_t i = 0; i < measurements; i++)
     {
         lsm.getEvent(&event);
         sum += event.acceleration.z;
@@ -240,11 +251,11 @@ double getAcceleration(int measurements)
     return sum/measurements;
 }
 
-double getAltitude(int measurements)
+double getAltitude(uint8_t measurements)
 {
     sensors_event_t event;
     double sum = 0;
-    for (int i = 0; i < measurements; i++)
+    for (uint8_t i = 0; i < measurements; i++)
     {
         bmp.getEvent(&event);
         sum += bmp.pressureToAltitude(SENSORS_PRESSURE_SEALEVELHPA,
