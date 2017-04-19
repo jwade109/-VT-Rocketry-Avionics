@@ -31,11 +31,7 @@ using namespace Equation;
 
 void setup()
 {
-    Serial.begin(115200);
-
     // set the pinmode for the diagnostic LEDs
-    // regWrite(&DDRD, INDICATOR_PIN, 1);
-    // regWrite(&DDRD, ERROR_PIN, 1);
     SET(DDRD, INDICATOR_PIN);
     SET(DDRD, ERROR_PIN);
 
@@ -114,15 +110,20 @@ void loop()
     double velocity = (altitude - alt_prev)/dt;
 
     // stage-specific progression logic
+    const uint8_t ticksToAdvance = 0.3/NOMINAL_DT;
     if (stage == ON_LAUNCHPAD && velocity > 20)
     {
-        stage++;
+        static int high_vel_count;
+        if (velocity > 20) high_vel_count++;
+        else if (high_vel_count > 0) high_vel_count--;
+        if (high_vel_count > ticksToAdvance) stage++;
     }
     if (stage == MOTOR_BURN)
     {
         static int low_accel_count;
         if (accel < -10) low_accel_count++;
-        if (low_accel_count > 15) stage++;
+        else if (low_accel_count > 0) low_accel_count--;
+        if (low_accel_count > ticksToAdvance) stage++;
     }
     if (stage == APOGEE_COAST && FLIGHT_NUMBER)
     {
