@@ -11,6 +11,7 @@
 #define NOMINAL_DT                  0.05 // seconds
 #define INDICATOR_PIN               3 // blinks with every tick
 #define ERROR_PIN                   4 // turns on if a fatal error occurs
+#define MOTOR_PIN                   5 // toggles flap state
 
 #define ON_LAUNCHPAD                0 // indicates rocket is on the launchpad. accel = 0.
 #define MOTOR_BURN                  1 // indicates motor is burning. accel > 0.
@@ -34,13 +35,16 @@ void setup()
     // set the pinmode for the diagnostic LEDs
     SET(DDRD, INDICATOR_PIN);
     SET(DDRD, ERROR_PIN);
+    SET(DDRD, MOTOR_PIN);
 
     // flash the LEDs to ensure they're all working
     SET(PORTD, INDICATOR_PIN);
     SET(PORTD, ERROR_PIN);
+    SET(PORTD, MOTOR_PIN);
     delay(1000);
     CLR(PORTD, INDICATOR_PIN);
     CLR(PORTD, ERROR_PIN);
+    CLR(PORTD, MOTOR_PIN);
 
     // initialize the LSM303, the BMP085, and the SD card
     if(!lsm.begin()) fatal_error(1);
@@ -87,14 +91,13 @@ void setup()
     sensorData.println(LAUNCHPAD_ALT);
     sensorData.print("Resting acceleration: ");
     sensorData.println(REST_ACCEL);
-    sensorData.println("time,raw alt,k alt,raw accel,k accel,vel");
+    sensorData.println("time,raw alt,k alt,raw accel,k accel,vel,s1,s2");
     BEGIN_TIME = millis();
     delay(NOMINAL_DT * 1000);
 }
 
 void loop()
 {
-    update_indicator();
     static double alt_prev;
     double current_time, dt, raw_altitude, altitude, raw_accel, accel;
     update_time(&current_time, &dt);
@@ -109,21 +112,30 @@ void loop()
     accel = X[1];
     double velocity = (altitude - alt_prev)/dt;
 
+     // status indicators allow internal state to be recorded efficiently
+    uint8_t major_status = 100;
+    uint8_t minor_status = 0;
     // stage-specific progression logic
-    const uint8_t ticksToAdvance = 0.3/NOMINAL_DT;
-    if (stage == ON_LAUNCHPAD && velocity > 20)
+    const uint8_t ticksToAdvance = 0.25/NOMINAL_DT;
+    if (stage == ON_LAUNCHPAD)
     {
-        static int high_vel_count;
-        if (velocity > 20) high_vel_count++;
+        static uint8_t high_vel_count;
+        if (velocity > 3) high_vel_count++;
         else if (high_vel_count > 0) high_vel_count--;
         if (high_vel_count > ticksToAdvance) stage++;
+
+        major_status = ON_LAUNCHPAD;
+        minor_status = high_vel_count;
     }
     if (stage == MOTOR_BURN)
     {
-        static int low_accel_count;
+        static uint8_t low_accel_count;
         if (accel < -10) low_accel_count++;
         else if (low_accel_count > 0) low_accel_count--;
         if (low_accel_count > ticksToAdvance) stage++;
+
+        major_status = MOTOR_BURN;
+        minor_status = low_accel_count;
     }
     if (stage == APOGEE_COAST && FLIGHT_NUMBER)
     {
@@ -146,6 +158,8 @@ void loop()
 
         const uint8_t vmin = 8; // minimum velocity for flap control
 
+        major_status = APOGEE_COAST;
+
         // predictive calculations determine where vehicle will be next step
         double alt_next = alt(altitude, velocity, DRY_MASS, K_ACTIVE, dt);
         double vel_next = vel(velocity, DRY_MASS, K_ACTIVE, dt);
@@ -158,16 +172,22 @@ void loop()
         if (apo_predict > TARGET_ALT && vel_next > vmin)
         {
             // TODO: flaps ON
+            SET(PORTD, MOTOR_PIN);
+            minor_status = 1;
         }
         else // otherwise, retract the flaps
         {
             // TODO: flaps OFF
+            CLR(PORTD, MOTOR_PIN);
+            minor_status = 0;
         }
 
         // permanently disable flaps if velocity is low enough
         if (velocity < vmin)
         {
             // TODO: flaps OFF
+            CLR(PORTD, MOTOR_PIN);
+            minor_status = 2;
             stage++;
         }
     }
@@ -186,12 +206,19 @@ void loop()
     sensorData.print(",");
     sensorData.print(accel);
     sensorData.print(",");
-    sensorData.println(velocity);
+    sensorData.print(velocity);
+    sensorData.print(",");
+    sensorData.print(major_status);
+    sensorData.print(",");
+    sensorData.println(minor_status);
+
     flush++;
     if (flush == 50)
     {
+        SET(PORTD, INDICATOR_PIN);
         sensorData.flush();
         flush = 0;
+        CLR(PORTD, INDICATOR_PIN);
     }
 
     // wait for next tick if computations were fast enough

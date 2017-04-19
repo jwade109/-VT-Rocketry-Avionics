@@ -1,4 +1,4 @@
-#define FLIGHT_NUMBER   0       // either 0 or 1
+#define FLIGHT_NUMBER   1       // either 0 or 1
 
 #define WET_MASS        5.0     // kilograms
 
